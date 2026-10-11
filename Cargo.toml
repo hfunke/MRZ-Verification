@@ -6,8 +6,8 @@ description = "A Rust library for validating the Machine Readable Zone (MRZ) of 
 license = "MIT"
 repository = "https://github.com/hfunke/MRZ-Verification"
 keywords = ["MRZ", "eMRTD", "ICAO", "Doc 9303", "ePassport"]
+packages = ["Parser implementations", "Command line utilities", "Encoding"]
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [lib]
 crate-type = ["cdylib"]
