@@ -2,7 +2,9 @@
 name = "mrz_verifier"
 version = "0.2.0"
 edition = "2021"
-
+description = "A Rust library for validating the Machine Readable Zone (MRZ) of electronic Machine Readable Travel Documents (eMRTDs) as specified by ICAO Doc 9303."
+license = "MIT"
+repository = "https://github.com/hfunke/MRZ-Verification"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
