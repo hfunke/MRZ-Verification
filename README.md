@@ -1,7 +1,7 @@
 ![example workflow](https://github.com/hfunke/MRZ/actions/workflows/rust.yml/badge.svg)
 ![example workflow](https://github.com/hfunke/MRZ/actions/workflows/coverage.yml/badge.svg)
 
-# MRZ
+# ICAO MRZ Verification
 
 A Rust library for parsing and validating the **Machine Readable Zone (MRZ)** of
 electronic Machine Readable Travel Documents (eMRTDs) as specified by
@@ -154,5 +154,5 @@ cargo test test_parse_mrz_td3   # run a single test
 
 ## Standards
 
-- ICAO Doc 9303 — Machine Readable Travel Documents
-- ISO/IEC 3166-1 — country codes
+- [ICAO Doc 9303 — Machine Readable Travel Documents, edition 8](https://www.icao.int/publications/doc-series/doc-9303)
+- [ISO/IEC 3166-1 — country codes](https://www.iso.org/iso-3166-country-codes.html)
