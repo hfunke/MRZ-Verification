@@ -5,6 +5,7 @@ edition = "2021"
 description = "A Rust library for validating the Machine Readable Zone (MRZ) of electronic Machine Readable Travel Documents (eMRTDs) as specified by ICAO Doc 9303."
 license = "MIT"
 repository = "https://github.com/hfunke/MRZ-Verification"
+keywords = ["MRZ", "eMRTD", "ICAO", "Doc 9303", "ePassport"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
