@@ -1,0 +1,15 @@
+[package]
+name = "mrz_verifier"
+version = "0.2.0"
+edition = "2021"
+
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+phf = { version = "0.14.0", features = ["macros"] }
+regex = "1.13.1"
+chrono = "0.4.45"
