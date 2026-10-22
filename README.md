@@ -1,5 +1,4 @@
-![example workflow](https://github.com/hfunke/MRZ/actions/workflows/rust.yml/badge.svg)
-![Coverage](https://github.com/hfunke/MRZ/actions/workflows/coverage.yml/badge.svg)
+[![Rust](https://github.com/hfunke/MRZ/actions/workflows/rust.yml/badge.svg)](https://github.com/hfunke/MRZ-Verification/actions/workflows/rust.yml)
 
 # ICAO MRZ Verification
 
