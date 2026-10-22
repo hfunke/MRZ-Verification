@@ -1,6 +1,6 @@
 [package]
 name = "mrz_verifier"
-version = "0.2.2"
+version = "0.2.3"
 edition = "2021"
 description = "A Rust library for validating the Machine Readable Zone (MRZ) of electronic Machine Readable Travel Documents (eMRTDs) as specified by ICAO Doc 9303."
 license = "MIT"
