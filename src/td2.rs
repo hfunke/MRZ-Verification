@@ -1,4 +1,5 @@
-use crate::{utils::{check_digits_numeric, trim, validate_check_digit}, MachineReadableZone};
+use crate::{utils::{check_digits_numeric, trim, validate_check_digit}, MachineReadableZone,
+    CHECK_DIGIT_DOCUMENT_NUMBER, CHECK_DIGIT_DATE_OF_BIRTH, CHECK_DIGIT_EXPIRY_DATE, CHECK_DIGIT_COMPOSITE};
 
 pub const TD2_LENGTH: usize = 72;
 
@@ -55,17 +56,19 @@ impl MachineReadableZone for TD2 {
         check_digits_numeric(&self.raw_mrz, &[45, 55, 63, 71])
     }
 
-    fn are_check_digits_valid(&self) -> bool {
+    fn check_digit_results(&self) -> Vec<(&'static str, bool)> {
         let mrz = &self.raw_mrz;
         // The document-number check digit is at the fixed position 45 normally, or
         // inside the optional-data field for an overflowing (>9 chars) document number.
         // It is computed over the whole document number in both cases.
         let doc_cd_pos = self.document_number_overflow().map_or(45, |(_, pos)| pos);
-        if !validate_check_digit(mrz, &self.get_document_number(), doc_cd_pos) { return false; }
-        if !validate_check_digit(mrz, &self.get_date_of_birth(), 55) { return false; }
-        if !validate_check_digit(mrz, &self.get_date_of_expiry(), 63) { return false; }
         let composite = format!("{}{}{}", &mrz[36..46], &mrz[49..56], &mrz[57..71]);
-        validate_check_digit(mrz, &composite, 71)
+        vec![
+            (CHECK_DIGIT_DOCUMENT_NUMBER, validate_check_digit(mrz, &self.get_document_number(), doc_cd_pos)),
+            (CHECK_DIGIT_DATE_OF_BIRTH, validate_check_digit(mrz, &self.get_date_of_birth(), 55)),
+            (CHECK_DIGIT_EXPIRY_DATE, validate_check_digit(mrz, &self.get_date_of_expiry(), 63)),
+            (CHECK_DIGIT_COMPOSITE, validate_check_digit(mrz, &composite, 71)),
+        ]
     }
 }
 

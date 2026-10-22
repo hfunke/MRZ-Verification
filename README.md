@@ -83,6 +83,7 @@ rather than getting nothing back.
 pub struct Document {
     pub numeric_check_digits: bool,          // check-digit positions are numeric
     pub valid_check_digits: bool,            // all check digits verify
+    pub check_digits: Vec<(&'static str, bool)>, // result per check digit
     pub valid_issuing_country_code: bool,
     pub valid_nationality_country_code: bool,
     pub issuing_country_code_type: String,   // "ISO/IEC 3166-1" or "ICAO Doc9303"
@@ -103,6 +104,22 @@ pub struct Document {
     pub optional_data: String,
 }
 ```
+
+`check_digits` lists each check digit the format carries, in MRZ order, so a
+caller can tell which field failed. The names are exported as constants:
+
+| Constant | Name | Present in |
+|---|---|---|
+| `CHECK_DIGIT_DOCUMENT_NUMBER` | `document_number` | all formats |
+| `CHECK_DIGIT_DATE_OF_BIRTH` | `date_of_birth` | all formats |
+| `CHECK_DIGIT_EXPIRY_DATE` | `expiry_date` | all formats |
+| `CHECK_DIGIT_PERSONAL_NUMBER` | `personal_number` | TD3, only if the field is not empty |
+| `CHECK_DIGIT_COMPOSITE` | `composite` | TD1, TD2, TD3 |
+
+`Document` and `Gender` implement `Clone`. With the optional `serde` feature
+(`mrz_verifier = { version = "...", features = ["serde"] }`) both also implement
+`serde::Serialize`. `check_digits` is serialized as `[["document_number", true], ...]`,
+and `expiry_date` as `"YYYY-MM-DD"`, or `null` if it could not be parsed.
 
 On failure, `parse_mrz` returns one of:
 

@@ -67,8 +67,8 @@ macro_rules! impl_mrz_getters {
 use chrono::NaiveDate;
 use countrycodes::{is_country_code_valid, get_country_name, get_country_code_type};
 use documentcodes::{is_document_code_harmonized, get_document_type_name};
-use document::{Document, Gender};
-use error::Error;
+pub use document::{Document, Gender};
+pub use error::Error;
 use mrv_a::{MRV_A_LENGTH, MrvA};
 use mrv_b::{MRV_B_LENGTH, MrvB};
 use regex::Regex;
@@ -108,8 +108,22 @@ pub trait MachineReadableZone {
     fn get_surname(&self) -> String;
     fn get_given_name(&self) -> String;
     fn are_check_digits_numeric(&self) -> bool;
-    fn are_check_digits_valid(&self) -> bool;
+    /// Result of every check digit this format carries, in MRZ order, keyed by
+    /// one of the `CHECK_DIGIT_*` names.
+    fn check_digit_results(&self) -> Vec<(&'static str, bool)>;
+    fn are_check_digits_valid(&self) -> bool {
+        self.check_digit_results().iter().all(|&(_, valid)| valid)
+    }
 }
+
+// Field names used in `Document::check_digits`.
+pub const CHECK_DIGIT_DOCUMENT_NUMBER: &str = "document_number";
+pub const CHECK_DIGIT_DATE_OF_BIRTH: &str = "date_of_birth";
+pub const CHECK_DIGIT_EXPIRY_DATE: &str = "expiry_date";
+/// TD3 only, and only when the personal number field is not empty.
+pub const CHECK_DIGIT_PERSONAL_NUMBER: &str = "personal_number";
+/// TD1, TD2 and TD3 only; MRV-A and MRV-B carry no composite check digit.
+pub const CHECK_DIGIT_COMPOSITE: &str = "composite";
 
 const DATE_FORMAT_YYMMDD: &str = "%y%m%d";
 //const DATE_FORMAT_YYMM: &str = "%y%m";
@@ -170,8 +184,9 @@ fn extract_data<T: MachineReadableZone>(m: T) -> Document {
     //let t = &m.get_raw_mrz();
 
     let numeric_check_digits = m.are_check_digits_numeric();
-    let valid_check_digits = m.are_check_digits_valid();
-   
+    let check_digits = m.check_digit_results();
+    let valid_check_digits = check_digits.iter().all(|&(_, valid)| valid);
+
     let document_type = m.get_document_type();
     let valid_document_type = is_document_type_valid(&document_type);
     let document_type_name = get_document_type_name(&document_type);
@@ -212,6 +227,7 @@ fn extract_data<T: MachineReadableZone>(m: T) -> Document {
     Document{
         numeric_check_digits,
         valid_check_digits,
+        check_digits,
         valid_issuing_country_code,
         valid_nationality_country_code,
         issuing_country_code_type,
@@ -947,6 +963,73 @@ mod tests {
     fn test_parse_mrz_td1_invalid_check_digits() {
         let dummy = parse_mrz("I<UTOD231458908<<<<<<<<<<<<<<<7408122F1204159UTO<<<<<<<<<<<6ERIKSSON<<ANNA<MARIA<<<<<<<<<<".to_string());
         assert!(!dummy.as_ref().unwrap().valid_check_digits);
+    }
+
+    #[test]
+    fn test_parse_mrz_td3_check_digits_per_field() {
+        let dummy = parse_mrz("P<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<L898902C36UTO7408122F1204159ZE184226B<<<<<10".to_string());
+        assert_eq!(dummy.unwrap().check_digits, vec![
+            (CHECK_DIGIT_DOCUMENT_NUMBER, true),
+            (CHECK_DIGIT_DATE_OF_BIRTH, true),
+            (CHECK_DIGIT_EXPIRY_DATE, true),
+            (CHECK_DIGIT_PERSONAL_NUMBER, true),
+            (CHECK_DIGIT_COMPOSITE, true),
+        ]);
+    }
+
+    #[test]
+    fn test_parse_mrz_td3_check_digits_invalid_document_number() {
+        // Wrong document-number check digit (5 instead of 6) also breaks the composite.
+        let dummy = parse_mrz("P<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<L898902C35UTO7408122F1204159ZE184226B<<<<<10".to_string());
+        assert_eq!(dummy.unwrap().check_digits, vec![
+            (CHECK_DIGIT_DOCUMENT_NUMBER, false),
+            (CHECK_DIGIT_DATE_OF_BIRTH, true),
+            (CHECK_DIGIT_EXPIRY_DATE, true),
+            (CHECK_DIGIT_PERSONAL_NUMBER, true),
+            (CHECK_DIGIT_COMPOSITE, false),
+        ]);
+    }
+
+    #[test]
+    fn test_parse_mrz_td3_check_digits_without_personal_number() {
+        let dummy = parse_mrz("P<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<L898902C36UTO7408122F1204159<<<<<<<<<<<<<<<8".to_string());
+        let doc = dummy.unwrap();
+        assert!(doc.valid_check_digits);
+        assert!(!doc.check_digits.iter().any(|&(name, _)| name == CHECK_DIGIT_PERSONAL_NUMBER));
+    }
+
+    #[test]
+    fn test_parse_mrz_td1_check_digits_invalid_document_number() {
+        let dummy = parse_mrz("I<UTOD231458908<<<<<<<<<<<<<<<7408122F1204159UTO<<<<<<<<<<<6ERIKSSON<<ANNA<MARIA<<<<<<<<<<".to_string());
+        let doc = dummy.unwrap();
+        let failed: Vec<_> = doc.check_digits.iter().filter(|&&(_, ok)| !ok).map(|&(name, _)| name).collect();
+        assert_eq!(failed, vec![CHECK_DIGIT_DOCUMENT_NUMBER, CHECK_DIGIT_COMPOSITE]);
+    }
+
+    #[test]
+    fn test_parse_mrz_mrv_b_check_digits_invalid_date_of_birth() {
+        let dummy = parse_mrz("V<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<L898902C<3UTO6908062F9406236ZE184226".to_string());
+        assert_eq!(dummy.unwrap().check_digits, vec![
+            (CHECK_DIGIT_DOCUMENT_NUMBER, true),
+            (CHECK_DIGIT_DATE_OF_BIRTH, false),
+            (CHECK_DIGIT_EXPIRY_DATE, true),
+        ]);
+    }
+
+    #[test]
+    fn test_document_clone() {
+        let doc = parse_mrz("P<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<L898902C36UTO7408122F1204159ZE184226B<<<<<10".to_string()).unwrap();
+        assert_eq!(doc.clone(), doc);
+    }
+
+    #[cfg(feature = "serde")]
+    #[test]
+    fn test_document_serialize() {
+        let doc = parse_mrz("P<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<L898902C35UTO7408122F1204159ZE184226B<<<<<10".to_string()).unwrap();
+        let json = serde_json::to_value(&doc).unwrap();
+        assert_eq!(json["check_digits"][0], serde_json::json!(["document_number", false]));
+        assert_eq!(json["gender"], "Female");
+        assert_eq!(json["expiry_date"], "2012-04-15");
     }
 
     #[test]

@@ -1,17 +1,25 @@
 use chrono::{NaiveDate, ParseError};
 
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub enum Gender {
     Female,
     Male,
     Other,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct Document {
     pub numeric_check_digits: bool,
+    /// `true` if every entry in `check_digits` is valid.
     pub valid_check_digits: bool,
+    /// Result per check digit, in MRZ order, keyed by the `CHECK_DIGIT_*` names
+    /// (e.g. `("date_of_birth", false)`). Only the check digits the format
+    /// carries are listed: MRV-A/B have no composite check digit, and the TD3
+    /// personal number is listed only when that field is not empty.
+    pub check_digits: Vec<(&'static str, bool)>,
     pub valid_issuing_country_code: bool,
     pub valid_nationality_country_code: bool,
     pub issuing_country_code_type: String,
@@ -37,6 +45,19 @@ pub struct Document {
     pub nationality_name: String,
     pub date_of_birth: String,
     pub gender: Gender,
+    /// Serialized as `"YYYY-MM-DD"`, or `null` if the date could not be parsed.
+    #[cfg_attr(feature = "serde", serde(serialize_with = "serialize_expiry_date"))]
     pub expiry_date: Result<NaiveDate, ParseError>,
     pub optional_data: String,
+}
+
+#[cfg(feature = "serde")]
+fn serialize_expiry_date<S: serde::Serializer>(
+    date: &Result<NaiveDate, ParseError>,
+    serializer: S,
+) -> Result<S::Ok, S::Error> {
+    match date {
+        Ok(d) => serializer.collect_str(&d.format("%Y-%m-%d")),
+        Err(_) => serializer.serialize_none(),
+    }
 }

@@ -1,4 +1,5 @@
-use crate::{utils::{check_digits_numeric, trim, validate_check_digit}, MachineReadableZone};
+use crate::{utils::{check_digits_numeric, trim, validate_check_digit}, MachineReadableZone,
+    CHECK_DIGIT_DOCUMENT_NUMBER, CHECK_DIGIT_DATE_OF_BIRTH, CHECK_DIGIT_EXPIRY_DATE, CHECK_DIGIT_PERSONAL_NUMBER, CHECK_DIGIT_COMPOSITE};
 
 pub const TD3_LENGTH: usize = 88;
 
@@ -29,15 +30,21 @@ impl MachineReadableZone for TD3 {
         check_digits_numeric(&self.raw_mrz, &[53, 63, 71, 86, 87])
     }
 
-    fn are_check_digits_valid(&self) -> bool {
+    fn check_digit_results(&self) -> Vec<(&'static str, bool)> {
         let mrz = &self.raw_mrz;
-        if !validate_check_digit(mrz, &self.get_document_number(), 53) { return false; }
-        if !validate_check_digit(mrz, &self.get_date_of_birth(), 63) { return false; }
-        if !validate_check_digit(mrz, &self.get_date_of_expiry(), 71) { return false; }
+        let mut results = vec![
+            (CHECK_DIGIT_DOCUMENT_NUMBER, validate_check_digit(mrz, &self.get_document_number(), 53)),
+            (CHECK_DIGIT_DATE_OF_BIRTH, validate_check_digit(mrz, &self.get_date_of_birth(), 63)),
+            (CHECK_DIGIT_EXPIRY_DATE, validate_check_digit(mrz, &self.get_date_of_expiry(), 71)),
+        ];
+        // An empty personal number field is not checked, so it gets no entry.
         let opt = self.get_optional_data();
-        if !opt.is_empty() && !validate_check_digit(mrz, &opt, 86) { return false; }
+        if !opt.is_empty() {
+            results.push((CHECK_DIGIT_PERSONAL_NUMBER, validate_check_digit(mrz, &opt, 86)));
+        }
         let composite = format!("{}{}{}{}", &mrz[44..54], &mrz[57..64], &mrz[65..72], &mrz[72..87]);
-        validate_check_digit(mrz, &composite, 87)
+        results.push((CHECK_DIGIT_COMPOSITE, validate_check_digit(mrz, &composite, 87)));
+        results
     }
 }
 

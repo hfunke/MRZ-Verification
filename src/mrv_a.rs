@@ -1,4 +1,5 @@
-use crate::{utils::{check_digits_numeric, trim, validate_check_digit}, MachineReadableZone};
+use crate::{utils::{check_digits_numeric, trim, validate_check_digit}, MachineReadableZone,
+    CHECK_DIGIT_DOCUMENT_NUMBER, CHECK_DIGIT_DATE_OF_BIRTH, CHECK_DIGIT_EXPIRY_DATE};
 
 pub const MRV_A_LENGTH: usize = 88;
 
@@ -31,11 +32,13 @@ impl MachineReadableZone for MrvA {
         check_digits_numeric(&self.raw_mrz, &[53, 63, 71])
     }
 
-    fn are_check_digits_valid(&self) -> bool {
+    fn check_digit_results(&self) -> Vec<(&'static str, bool)> {
         let mrz = &self.raw_mrz;
-        validate_check_digit(mrz, &self.get_document_number(), 53)
-            && validate_check_digit(mrz, &self.get_date_of_birth(), 63)
-            && validate_check_digit(mrz, &self.get_date_of_expiry(), 71)
+        vec![
+            (CHECK_DIGIT_DOCUMENT_NUMBER, validate_check_digit(mrz, &self.get_document_number(), 53)),
+            (CHECK_DIGIT_DATE_OF_BIRTH, validate_check_digit(mrz, &self.get_date_of_birth(), 63)),
+            (CHECK_DIGIT_EXPIRY_DATE, validate_check_digit(mrz, &self.get_date_of_expiry(), 71)),
+        ]
     }
 }
 
